@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en" data-dark="1">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Skill Chart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0E1116;
+    --accent: #0E7490;
+    --neg: #7C3AED;
+    --font: 'Space Grotesk', system-ui, sans-serif;
+    --ink: #1A1916;
+    --muted: #76726A;
+    --surface: #FFFFFF;
+    --surface-2: #FBFAF6;
+    --line: #E6E2D8;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --radius: 14px;
+    --pad: 22px;
+  }
+  html[data-dark="1"] {
+    --ink: #F3F1EC;
+    --muted: #9A968D;
+    --surface: #1A1D23;
+    --surface-2: #15171C;
+    --line: #2A2E36;
+  }
+  html[data-density="compact"] { --pad: 14px; }
+  html[data-density="comfy"] { --pad: 30px; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    transition: background .3s ease, color .3s ease;
+  }
+  #root { min-height: 100%; }
+  button { font-family: inherit; cursor: pointer; }
+  ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+  .app { max-width: 1240px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 80px; position: relative; }
+
+  /* topbar */
+  .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  .title { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02em; margin: 0; cursor: text; line-height: 1.05; }
+  .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 14px; font-weight: 500; }
+  .actions { display: flex; gap: 8px; }
+  .ghost {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    padding: 9px 15px; border-radius: 9px; font-size: 13px; font-weight: 600;
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  .ghost:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .ghost:active { transform: translateY(1px); }
+  .ghost.danger:hover { border-color: #c2410c; color: #c2410c; }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: minmax(380px, 500px) 1fr; gap: 30px; align-items: start; }
+  .layout.noradar { grid-template-columns: 1fr; }
+  @media (max-width: 1080px) { .layout { grid-template-columns: 1fr; } }
+
+  /* viz column */
+  .viz { position: sticky; top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--pad); }
+  @media (max-width: 1080px) { .viz { position: static; } }
+
+  .balancecard { display: flex; align-items: center; gap: 18px; padding-bottom: 18px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .bal-row { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
+  .bal-row b { color: var(--ink); font-family: var(--mono); margin-left: auto; }
+  .bal-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .bal-dot.pos { background: var(--accent); }
+  .bal-dot.neg { background: var(--neg); }
+  .bal-share { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+  .lvl-ring {
+    --pct: 0; width: 84px; height: 84px; border-radius: 50%; flex: none;
+    background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--neg) 0);
+    display: grid; place-items: center; transition: background .4s ease;
+  }
+  .lvl-inner { width: 66px; height: 66px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; line-height: 1; }
+  .lvl-kick { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+  .lvl-big { font-family: var(--mono); font-size: 26px; font-weight: 700; }
+  .lvl-meta { flex: 1; }
+  .xp { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+  .tonext { font-size: 12px; color: var(--muted); margin: 2px 0 8px; font-weight: 500; }
+  .mini-track { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .mini-track span { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s ease; }
+
+  .radar { width: 100%; max-width: 500px; height: auto; display: block; margin: 4px auto; overflow: visible; }
+  .radar-label { font-family: var(--font); font-size: 11px; font-weight: 600; fill: var(--ink); }
+  .radar-val { font-family: var(--mono); font-size: 10px; font-weight: 700; fill: var(--accent); }
+  .group-label { font-family: var(--font); font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .hint { font-size: 11.5px; color: var(--muted); text-align: center; margin: 6px 6px 0; line-height: 1.4; }
+
+  /* board */
+  .board { display: flex; flex-direction: column; gap: 18px; }
+  .cat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--pad); }
+  .cat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cat-sum { font-family: var(--mono); font-size: 12px; font-weight: 700; margin-left: 2px; }
+  .cat-title { background: none; border: none; padding: 0; font-family: inherit; font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .cat-count { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; }
+  .cat-del { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .15s, color .15s; }
+  .cat:hover .cat-del { opacity: 1; }
+  .cat-del:hover { color: #c2410c; }
+
+  .skills { display: flex; flex-direction: column; }
+  .srow { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .srow:first-child { border-top: none; }
+  .srow-main { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 180px; }
+  .sname { background: none; border: none; padding: 0; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--ink); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+  .sname:hover { color: var(--accent); }
+  .tier { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; flex: none; }
+
+  /* stage milestone blocks */
+  .stage { display: flex; gap: 3px; flex: none; }
+  .sblk { width: 14px; height: 20px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface-2); transition: background .3s ease; }
+  .sblk.on { border-color: transparent; }
+
+  .srow-ctrl { display: flex; align-items: center; gap: 12px; flex: none; }
+
+  /* progress: cycles toward next stage + points toward next cycle */
+  .prog { display: flex; flex-direction: column; gap: 4px; width: 132px; }
+  html[data-density="compact"] .prog { width: 112px; }
+  .prog-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+  .cyc-lbl { font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+  .pnum { background: none; border: none; padding: 0; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--ink); }
+  .pnum:hover { color: var(--accent); }
+  .pden { color: var(--muted); font-weight: 500; font-size: 9px; }
+  .pin { width: 46px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--ink); background: var(--surface-2); border: 1px solid var(--accent); border-radius: 5px; padding: 2px 4px; outline: none; text-align: right; }
+  .pbar { position: relative; height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+  .pfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; transition: width .35s ease; }
+  .cycles { display: flex; gap: 2px; }
+  .pip { flex: 1; height: 4px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); transition: background .3s ease; }
+  .pip.on { border-color: transparent; }
+
+  .steppers { display: flex; align-items: center; gap: 5px; }
+  .step { height: 30px; min-width: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-family: var(--mono); font-size: 13px; font-weight: 700; line-height: 1; display: grid; place-items: center; transition: transform .1s, border-color .15s, background .15s; }
+  .step:hover:not(:disabled) { border-color: var(--accent); }
+  .step.up:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .step:active:not(:disabled) { transform: scale(.9); }
+  .step:disabled { opacity: .35; cursor: not-allowed; }
+  .remove { width: 24px; height: 24px; border-radius: 6px; border: none; background: none; color: var(--muted); font-size: 18px; line-height: 1; opacity: 0; transition: opacity .15s, color .15s; }
+  .srow:hover .remove { opacity: 1; }
+  .remove:hover { color: #c2410c; }
+
+  .rename { font-family: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface-2); border: 1px solid var(--accent); border-radius: 7px; padding: 5px 9px; outline: none; min-width: 0; }
+  .cat-rename { font-size: 17px; font-weight: 700; }
+  .title-rename { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02em; padding: 2px 8px; }
+
+  .add-row, .add-cat { background: none; border: 1px dashed var(--line); color: var(--muted); font-size: 13px; font-weight: 600; padding: 9px; border-radius: 9px; transition: border-color .15s, color .15s; }
+  .add-row { margin-top: 10px; width: 100%; }
+  .add-row:hover, .add-cat:hover { border-color: var(--accent); color: var(--accent); }
+  .add-cats { display: flex; gap: 10px; }
+  .add-cat { flex: 1; padding: 14px; }
+  .addskill { margin-top: 10px; }
+  .addskill .rename { width: 100%; }
+
+  /* floats + celebrate */
+  .floats { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+  .float { position: absolute; font-family: var(--mono); font-weight: 700; font-size: 16px; animation: floatup .9s ease-out forwards; white-space: nowrap; }
+  .float.big { font-size: 20px; letter-spacing: .02em; animation: floatup 1.1s ease-out forwards; }
+  @keyframes floatup { 0% { opacity: 0; transform: translateY(0) scale(.7); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-52px) scale(1.15); } }
+
+  .celebrate { position: fixed; inset: 0; display: grid; place-items: center; z-index: 70; pointer-events: none; background: color-mix(in srgb, var(--bg) 55%, transparent); animation: fadein .25s ease; }
+  .celebrate-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 34px 52px; display: grid; justify-items: center; gap: 4px; box-shadow: 0 30px 80px -30px rgba(0,0,0,.4); animation: pop .5s cubic-bezier(.2,1.3,.4,1); border-top: 4px solid var(--ce, var(--accent)); }
+  .ce-kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .2em; color: var(--ce, var(--accent)); }
+  .ce-num { font-size: 46px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; text-align: center; }
+  .ce-sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+  @keyframes pop { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+
+
+
+
+
+<script>/* Skill Chart — data model + persistence (plain JS, attaches to window.SkillData) */
+(function () {
+  const STORE_KEY = "skillchart.v2";
+
+  // Stage names by polarity. Index 0 = unset, 1..3 = the dataset's stage names.
+  const STAGES = {
+    positive: ["Unset", "Zero", "Positive", "Positive \u221E"],
+    negative: ["Unset", "Below Zero", "Negative", "Negative \u221E"],
+  };
+
+  function stageFor(level, polarity) {
+    const arr = STAGES[polarity] || STAGES.positive;
+    const i = Math.max(0, Math.min(arr.length - 1, level));
+    return arr[i];
+  }
+
+  let _id = 1;
+  const uid = (p) => `${p}_${(_id++).toString(36)}${Date.now().toString(36).slice(-3)}`;
+
+  // From uploads/Dataset.xlsx — Positive & Negative categories,
+  // each item carrying a Stage (level out of 3) and a Rate (out of 30).
+  // Leveling model: tapping adds points -> fill 30 = 1 cycle -> N cycles = +1 stage.
+  function defaultState() {
+    const mk = (name, level, rate) => ({ id: uid("s"), name, level, rate, charges: 0 });
+    return {
+      title: "Life Balance Chart",
+      maxLevel: 3,
+      maxRate: 30,
+      stageCost: 8,
+      categories: [
+        {
+          id: uid("c"),
+          name: "Positive",
+          polarity: "positive",
+          skills: [
+            mk("Internship", 1, 3),
+            mk("Gym & Food", 1, 2),
+            mk("Freelance", 1, 1),
+            mk("YouTube", 1, 4),
+            mk("Tutoring", 1, 1),
+            mk("CLEP (History)", 1, 1),
+            mk("Structure", 1, 1),
+            mk("Think Tank", 1, 10),
+            mk("Research", 1, 2),
+          ],
+        },
+        {
+          id: uid("c"),
+          name: "Negative",
+          polarity: "negative",
+          skills: [
+            mk("Screen Time", 1, 10),
+            mk("Laziness", 1, 3),
+            mk("Inefficiency", 1, 2),
+            mk("Lack of Physical Fitness", 1, 3),
+            mk("Waste of Resources", 1, 1),
+          ],
+        },
+      ],
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.categories)) return defaultState();
+      if (!parsed.maxRate) parsed.maxRate = 30;
+      if (!parsed.stageCost) parsed.stageCost = 8;
+      // backfill polarity / rate / charges for any older saves
+      parsed.categories.forEach((c, i) => {
+        if (!c.polarity) c.polarity = i === parsed.categories.length - 1 && /neg/i.test(c.name) ? "negative" : "positive";
+        c.skills.forEach((s) => { if (typeof s.rate !== "number") s.rate = 1; if (typeof s.charges !== "number") s.charges = 0; });
+      });
+      return parsed;
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function save(state) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function reset() {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    return defaultState();
+  }
+
+  // ----- leveling mechanic -----
+  // Add `delta` points to a skill, cascading: 30 points = 1 cycle, `stageCost`
+  // cycles = +1 stage. Returns the new skill + which milestone fired.
+  function applyPoints(skill, delta, stageCost, maxStage) {
+    let level = skill.level == null ? 1 : skill.level;
+    let points = skill.rate || 0;
+    let charges = skill.charges || 0;
+    let event = "point";
+    points += delta;
+    // cascade up
+    while (points >= 30) {
+      points -= 30;
+      charges += 1;
+      event = "charge";
+      if (charges >= stageCost) {
+        if (level < maxStage) { level += 1; charges = 0; event = "stage"; }
+        else { charges = stageCost; points = 30; event = "max"; break; }
+      }
+    }
+    // cascade down
+    while (points < 0) {
+      if (charges > 0) { charges -= 1; points += 30; }
+      else if (level > 0) { level -= 1; charges = stageCost - 1; points += 30; }
+      else { points = 0; charges = 0; break; }
+    }
+    return { skill: Object.assign({}, skill, { level: level, rate: points, charges: charges }), event: event };
+  }
+
+  // Total accumulated effort for a skill, in points.
+  function effort(skill, stageCost) {
+    const lvl = Math.max(0, (skill.level || 0) - 1);
+    return (lvl * stageCost + (skill.charges || 0)) * 30 + (skill.rate || 0);
+  }
+
+  // Fractional stage 1..maxStage for a smooth radar.
+  function fracStage(skill, stageCost) {
+    const base = skill.level || 0;
+    return base + ((skill.charges || 0) * 30 + (skill.rate || 0)) / (stageCost * 30) - 1 + 1;
+  }
+
+  // ----- derived stats -----
+  function categoryAvg(cat) {
+    if (!cat.skills.length) return 0;
+    return cat.skills.reduce((a, s) => a + s.level, 0) / cat.skills.length;
+  }
+
+  function sumRate(cat) {
+    return cat.skills.reduce((a, s) => a + (s.rate || 0), 0);
+  }
+
+  // Positive vs negative balance, driven by total accumulated effort.
+  function balance(state) {
+    const sc = state.stageCost || 8;
+    let posRate = 0, negRate = 0;
+    state.categories.forEach((c) => {
+      c.skills.forEach((s) => {
+        const e = effort(s, sc);
+        if (c.polarity === "negative") negRate += e;
+        else posRate += e;
+      });
+    });
+    const net = posRate - negRate;
+    const total = posRate + negRate;
+    const share = total ? (posRate / total) * 100 : 50;
+    return { posRate, negRate, net, total, share };
+  }
+
+  // Coarse milestone for the celebrate animation (rises every 5 net points).
+  function milestone(state) {
+    return Math.floor(balance(state).net / 5);
+  }
+
+  window.SkillData = {
+    STORE_KEY,
+    STAGES,
+    stageFor,
+    uid,
+    defaultState,
+    load,
+    save,
+    reset,
+    applyPoints,
+    effort,
+    fracStage,
+    categoryAvg,
+    sumRate,
+    balance,
+    milestone,
+  };
+})();
+</script>
+<script type="text/babel">// @ds-adherence-ignore -- omelette starter scaffold (raw elements/hex/px by design)
+
+/* BEGIN USAGE */
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+// Exports (to window): useTweaks, TweaksPanel, TweakSection, TweakRow, TweakSlider,
+//   TweakToggle, TweakRadio, TweakSelect, TweakText, TweakNumber, TweakColor, TweakButton.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// TweakRadio is the segmented control for 2–3 short options (auto-falls-back to
+// TweakSelect past ~16/~10 chars per label); reach for TweakSelect directly when
+// options are many or long. For color tweaks always curate 3-4 options rather than
+// a free picker; an option can also be a whole 2–5 color palette (the stored value
+// is the array). The Tweak* controls are a floor, not a ceiling — build custom
+// controls inside the panel if a tweak calls for UI they don't cover.
+/* END USAGE */
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+</script>
+<script type="text/babel">/* RadarChart — dual (multi) wedge polygon radar.
+   Each category gets a proportional sector; its skills are the spokes within that sector.
+   Accepts: groups=[{name, color, axes:[{label, value, max, sub}]}], size
+   Exports: window.RadarChart */
+(function () {
+  const { useRef, useEffect, useState } = React;
+
+  function polar(cx, cy, r, angleDeg) {
+    const a = ((angleDeg - 90) * Math.PI) / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+
+  function RadarChart({ groups, size = 500 }) {
+    const cx = size / 2, cy = size / 2;
+    const R = size * 0.27;
+    const rings = 4;
+
+    // flatten all axes: [{label, value, max, sub, color, groupIdx}]
+    const allAxes = [];
+    groups.forEach((g, gi) =>
+      (g.axes || []).forEach((a) =>
+        allAxes.push({ ...a, color: g.color, groupIdx: gi })
+      )
+    );
+    const N = Math.max(allAxes.length, 3);
+
+    // each spoke equally spaced
+    const angleAt = (i) => (i / N) * 360;
+
+    // group start indices and mid-angles (for sector labels)
+    let running = 0;
+    const gMeta = groups.map((g) => {
+      const startIdx = running;
+      running += (g.axes || []).length;
+      const endIdx = running;
+      const midAngle = ((startIdx + endIdx) / 2 / N) * 360;
+      return { startIdx, endIdx, midAngle };
+    });
+
+    // boundary angles between categories (skip first — no boundary before group 0)
+    const boundaries = gMeta.slice(1).map((m) => (m.startIdx / N) * 360);
+
+    // animate fractional values
+    const targets = allAxes.map((a) =>
+      a.max ? Math.max(0, Math.min(1, a.value / a.max)) : 0
+    );
+    const [vals, setVals] = useState(() => targets.map(() => 0));
+    const raf = useRef(0);
+    const cur = useRef(targets.map(() => 0));
+
+    const depsKey = allAxes.map((a) => a.value).join(",") + "|" + N;
+    useEffect(() => {
+      cancelAnimationFrame(raf.current);
+      const from = cur.current.slice();
+      while (from.length < targets.length) from.push(0);
+      from.length = targets.length;
+      const start = performance.now();
+      const dur = 500;
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        const e = 1 - Math.pow(1 - t, 3);
+        const next = targets.map((tv, i) => from[i] + (tv - from[i]) * e);
+        cur.current = next;
+        setVals(next);
+        if (t < 1) raf.current = requestAnimationFrame(tick);
+      };
+      raf.current = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf.current);
+      // eslint-disable-next-line
+    }, [depsKey]);
+
+    const gridColor = "var(--line)";
+
+    // sector background polygon (at full R) for each group — very faint tint
+    const sectorBg = groups.map((g, gi) => {
+      const { startIdx, endIdx } = gMeta[gi];
+      const count = endIdx - startIdx;
+      if (count <= 0) return null;
+      const pts = [];
+      for (let i = startIdx; i < endIdx; i++) {
+        const [x, y] = polar(cx, cy, R, angleAt(i));
+        pts.push(`${x},${y}`);
+      }
+      return { color: g.color, pts: `${cx},${cy} ${pts.join(" ")}` };
+    }).filter(Boolean);
+
+    // per-group wedge polygon (animated, from center through value-dots)
+    const wedges = groups.map((g, gi) => {
+      const { startIdx, endIdx } = gMeta[gi];
+      const pts = [];
+      for (let i = startIdx; i < endIdx; i++) {
+        const frac = vals[i] ?? 0;
+        const [x, y] = polar(cx, cy, Math.max(0, frac) * R, angleAt(i));
+        pts.push(`${x},${y}`);
+      }
+      return { color: g.color, pts: `${cx},${cy} ${pts.join(" ")}` };
+    });
+
+    return (
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="radar"
+        role="img"
+        aria-label="Multi-category skill radar"
+        style={{ overflow: "visible" }}
+      >
+        {/* grid rings */}
+        {Array.from({ length: rings }).map((_, ri) => {
+          const rr = (R * (ri + 1)) / rings;
+          const pts = Array.from({ length: N })
+            .map((_, i) => polar(cx, cy, rr, angleAt(i)).join(","))
+            .join(" ");
+          return (
+            <polygon key={"ring" + ri} points={pts} fill="none" stroke={gridColor} strokeWidth={ri === rings - 1 ? 1.5 : 0.8} />
+          );
+        })}
+
+        {/* spokes */}
+        {allAxes.map((_, i) => {
+          const [x, y] = polar(cx, cy, R, angleAt(i));
+          return <line key={"sp" + i} x1={cx} y1={cy} x2={x} y2={y} stroke={gridColor} strokeWidth="0.8" />;
+        })}
+
+        {/* sector background tints */}
+        {sectorBg.map((s, i) => (
+          <polygon key={"bg" + i} points={s.pts} fill={s.color} fillOpacity="0.04" stroke="none" />
+        ))}
+
+        {/* boundary dividers between groups */}
+        {boundaries.map((ang, i) => {
+          const [x, y] = polar(cx, cy, R * 1.04, ang);
+          return (
+            <line key={"div" + i} x1={cx} y1={cy} x2={x} y2={y}
+              stroke="var(--surface)" strokeWidth="3" />
+          );
+        })}
+
+        {/* per-group wedge polygon (filled, animated) */}
+        {wedges.map((w, i) => (
+          <polygon
+            key={"wedge" + i}
+            points={w.pts}
+            fill={w.color}
+            fillOpacity="0.18"
+            stroke={w.color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {/* vertex dots */}
+        {allAxes.map((a, i) => {
+          const frac = vals[i] ?? 0;
+          const [x, y] = polar(cx, cy, Math.max(0, frac) * R, angleAt(i));
+          return (
+            <circle key={"dot" + i} cx={x} cy={y} r="3.5"
+              fill={a.color} stroke="var(--surface)" strokeWidth="1.5" />
+          );
+        })}
+
+        {/* spoke labels — name only, no sub */}
+        {allAxes.map((a, i) => {
+          const ang = angleAt(i);
+          const [lx, ly] = polar(cx, cy, R + 22, ang);
+          let anchor = "middle";
+          if (ang > 8 && ang < 172) anchor = "start";
+          else if (ang > 188 && ang < 352) anchor = "end";
+          const baseline = ang > 95 && ang < 265 ? 4 : 0;
+          return (
+            <text key={"lbl" + i} x={lx} y={ly + baseline} textAnchor={anchor}
+              className="radar-label" style={{ fill: a.color }}>
+              {a.label}
+            </text>
+          );
+        })}
+      </svg>
+    );
+  }
+
+  window.RadarChart = RadarChart;
+})();
+</script>
+<script type="text/babel">/* Skill Chart — main app. Requires React, data.js, RadarChart.jsx, tweaks-panel.jsx */
+const { useState, useEffect, useRef, useCallback } = React;
+const SD = window.SkillData;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/ {
+  accent: "#0E7490",
+  neg: "#7C3AED",
+  bg: "#0E1116",
+  font: "Space Grotesk",
+  density: "regular",
+  showRadar: true,
+  radarMetric: "level",
+  pointsPerTap: 1,
+} /*EDITMODE-END*/;
+
+/* ---------- stage milestone blocks (display) ---------- */
+function StageBlocks({ level, max, color }) {
+  return (
+    <div className="stage" title={`Stage ${level} of ${max}`}>
+      {Array.from({ length: max }).map((_, i) => (
+        <span key={i} className={"sblk" + (i < level ? " on" : "")} style={i < level ? { background: color } : null} />
+      ))}
+    </div>
+  );
+}
+
+function SkillRow({ skill, max, maxRate, stageCost, polarity, color, step, onAdd, onSetPoints, onRename, onRemove }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(skill.name);
+  const [pEdit, setPEdit] = useState(false);
+  const [pVal, setPVal] = useState(String(skill.rate));
+  const stage = SD.stageFor(skill.level, polarity);
+  const charges = skill.charges || 0;
+  const pct = Math.round((skill.rate / 30) * 100);
+
+  const commitPoints = () => {
+    let v = parseInt(pVal, 10);
+    if (isNaN(v)) v = skill.rate;
+    v = Math.max(0, Math.min(30, v));
+    onSetPoints(v);
+    setPVal(String(v));
+    setPEdit(false);
+  };
+
+  return (
+    <div className="srow">
+      <div className="srow-main">
+        {editing ? (
+          <input
+            className="rename"
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => { setEditing(false); onRename(name.trim() || skill.name); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") { setName(skill.name); setEditing(false); }
+            }}
+          />
+        ) : (
+          <button className="sname" onClick={() => setEditing(true)} title="Rename">{skill.name}</button>
+        )}
+        <StageBlocks level={skill.level} max={max} color={color} />
+        <span className="tier" style={{ color: skill.level ? color : "var(--muted)" }}>{stage}</span>
+      </div>
+
+      <div className="srow-ctrl">
+        <div className="prog">
+          <div className="prog-top">
+            <span className="cyc-lbl">{charges}/{stageCost} cycles</span>
+            {pEdit ? (
+              <input
+                className="pin"
+                type="number"
+                min="0"
+                max="30"
+                autoFocus
+                value={pVal}
+                onChange={(e) => setPVal(e.target.value)}
+                onBlur={commitPoints}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+              />
+            ) : (
+              <button className="pnum" onClick={() => { setPVal(String(skill.rate)); setPEdit(true); }} title="Set points">
+                {skill.rate}<span className="pden">/30</span>
+              </button>
+            )}
+          </div>
+          <div className="pbar"><span className="pfill" style={{ width: pct + "%", background: color }} /></div>
+          <div className="cycles">
+            {Array.from({ length: stageCost }).map((_, i) => (
+              <span key={i} className={"pip" + (i < charges ? " on" : "")} style={i < charges ? { background: color } : null} />
+            ))}
+          </div>
+        </div>
+
+        <div className="steppers">
+          <button className="step" onClick={(e) => onAdd(-step, e)} aria-label="Remove points" disabled={SD.effort(skill, stageCost) <= 0}>–</button>
+          <button className="step up" onClick={(e) => onAdd(step, e)} aria-label="Add points">+{step}</button>
+        </div>
+
+        <button className="remove" onClick={onRemove} title="Remove" aria-label="Remove">×</button>
+      </div>
+    </div>
+  );
+}
+
+function Category({ cat, max, maxRate, stageCost, accent, neg, step, onMutate, onAdd }) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [title, setTitle] = useState(cat.name);
+  const color = cat.polarity === "negative" ? neg : accent;
+
+  const addSkill = () => {
+    const nm = newName.trim();
+    if (!nm) { setAdding(false); return; }
+    onMutate((c) => ({ ...c, skills: [...c.skills, { id: SD.uid("s"), name: nm, level: 1, rate: 0, charges: 0 }] }));
+    setNewName("");
+    setAdding(false);
+  };
+
+  return (
+    <section className={"cat " + cat.polarity}>
+      <header className="cat-head">
+        <span className="cat-dot" style={{ background: color }} />
+        {editingTitle ? (
+          <input
+            className="rename cat-rename"
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => { setEditingTitle(false); onMutate((c) => ({ ...c, name: title.trim() || cat.name })); }}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          />
+        ) : (
+          <button className="cat-title" onClick={() => setEditingTitle(true)} title="Rename category">{cat.name}</button>
+        )}
+        <span className="cat-count">{cat.skills.length}</span>
+        <span className="cat-sum" style={{ color }}>{SD.balance({ stageCost, categories: [cat] })[cat.polarity === "negative" ? "negRate" : "posRate"]} pts</span>
+        <button className="cat-del" title="Delete category" onClick={() => onMutate(null)}>Delete</button>
+      </header>
+
+      <div className="skills">
+        {cat.skills.map((s, i) => (
+          <SkillRow
+            key={s.id}
+            skill={s}
+            max={max}
+            maxRate={maxRate}
+            stageCost={stageCost}
+            polarity={cat.polarity}
+            color={color}
+            step={step}
+            onAdd={(delta, e) => onAdd(cat.id, s.id, delta, e)}
+            onSetPoints={(rate) => onMutate((c) => { const skills = c.skills.slice(); skills[i] = { ...skills[i], rate }; return { ...c, skills }; })}
+            onRename={(nm) => onMutate((c) => { const skills = c.skills.slice(); skills[i] = { ...skills[i], name: nm }; return { ...c, skills }; })}
+            onRemove={() => onMutate((c) => ({ ...c, skills: c.skills.filter((_, j) => j !== i) }))}
+          />
+        ))}
+      </div>
+
+      {adding ? (
+        <div className="addskill">
+          <input
+            className="rename"
+            autoFocus
+            placeholder="Item name…"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={addSkill}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addSkill();
+              if (e.key === "Escape") { setNewName(""); setAdding(false); }
+            }}
+          />
+        </div>
+      ) : (
+        <button className="add-row" onClick={() => setAdding(true)}>+ Add item</button>
+      )}
+    </section>
+  );
+}
+
+function FloatLayer({ floats }) {
+  return (
+    <div className="floats">
+      {floats.map((f) => (
+        <span key={f.id} className={"float" + (f.big ? " big" : "")} style={{ left: f.x, top: f.y, color: f.color }}>{f.text}</span>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [state, setState] = useState(() => SD.load());
+  const [floats, setFloats] = useState([]);
+  const [celebrate, setCelebrate] = useState(null);
+  const fx = useRef(null);
+  const fileRef = useRef(null);
+
+  useEffect(() => { SD.save(state); }, [state]);
+
+  useEffect(() => {
+    const r = document.documentElement;
+    r.style.setProperty("--accent", t.accent);
+    r.style.setProperty("--neg", t.neg);
+    r.style.setProperty("--bg", t.bg);
+    r.style.setProperty("--font", `'${t.font}', system-ui, sans-serif`);
+    r.dataset.density = t.density;
+    const hex = (t.bg || "#fff").replace("#", "");
+    const nn = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+    const lum = (0.299 * parseInt(nn.slice(0, 2), 16) + 0.587 * parseInt(nn.slice(2, 4), 16) + 0.114 * parseInt(nn.slice(4, 6), 16)) / 255;
+    r.dataset.dark = lum < 0.5 ? "1" : "0";
+  }, [t.accent, t.neg, t.bg, t.font, t.density]);
+
+  const bal = SD.balance(state);
+
+  const spawnFloat = useCallback((e, color, text, big) => {
+    const x = (e && e.clientX) || window.innerWidth / 2;
+    const y = (e && e.clientY) || window.innerHeight / 2;
+    const id = Math.random().toString(36).slice(2);
+    setFloats((f) => [...f, { id, x: x - (big ? 18 : 8), y: y - 18, color, text, big }]);
+    setTimeout(() => setFloats((f) => f.filter((it) => it.id !== id)), big ? 1100 : 850);
+  }, []);
+
+  // core leveling handler — functional update so rapid taps accumulate;
+  // the resulting milestone is stashed in `fx` and animated from an effect.
+  const onAdd = (catId, skillId, delta, e) => {
+    const cx = e && e.clientX ? e.clientX : window.innerWidth / 2;
+    const cy = e && e.clientY ? e.clientY : window.innerHeight / 2;
+    setState((prev) => {
+      const cat = prev.categories.find((c) => c.id === catId);
+      if (!cat) return prev;
+      const sk = cat.skills.find((s) => s.id === skillId);
+      if (!sk) return prev;
+      const color = cat.polarity === "negative" ? t.neg : t.accent;
+      const res = SD.applyPoints(sk, delta, prev.stageCost, prev.maxLevel);
+      if (delta > 0) {
+        fx.current = {
+          event: res.event,
+          color,
+          cx,
+          cy,
+          delta,
+          stageName: SD.stageFor(res.skill.level, cat.polarity),
+          sub: `${cat.name} · ${res.skill.name}`,
+        };
+      }
+      return {
+        ...prev,
+        categories: prev.categories.map((c) =>
+          c.id !== catId ? c : { ...c, skills: c.skills.map((s) => (s.id === skillId ? res.skill : s)) }
+        ),
+      };
+    });
+  };
+
+  // consume the stashed milestone and play the right animation
+  useEffect(() => {
+    const f = fx.current;
+    if (!f) return;
+    fx.current = null;
+    const e = { clientX: f.cx, clientY: f.cy };
+    if (f.event === "stage") {
+      setCelebrate({ title: "Stage Up", big: f.stageName, sub: f.sub, color: f.color });
+      setTimeout(() => setCelebrate(null), 1800);
+      spawnFloat(e, f.color, "+1 STAGE", true);
+    } else if (f.event === "charge") {
+      spawnFloat(e, f.color, "+30", true);
+    } else if (f.event === "max") {
+      spawnFloat(e, f.color, "MAX", true);
+    } else {
+      spawnFloat(e, f.color, "+" + f.delta);
+    }
+  }, [state]);
+
+  const mutateCat = (catId) => (updater) => {
+    setState((s) => {
+      if (updater === null) return { ...s, categories: s.categories.filter((c) => c.id !== catId) };
+      return { ...s, categories: s.categories.map((c) => (c.id === catId ? updater(c) : c)) };
+    });
+  };
+
+  const addCategory = (polarity) => {
+    setState((s) => ({
+      ...s,
+      categories: [...s.categories, { id: SD.uid("c"), name: polarity === "negative" ? "New Negative" : "New Positive", polarity, skills: [] }],
+    }));
+  };
+
+  const doReset = () => { if (confirm("Reset to the dataset's starting values?")) setState(SD.reset()); };
+
+  const doExport = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (state.title || "skill-chart").replace(/\s+/g, "-").toLowerCase() + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doImport = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (parsed && Array.isArray(parsed.categories)) setState(parsed);
+        else alert("That file doesn't look like a chart.");
+      } catch (err) { alert("Could not read that file."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  // build radar groups — one wedge polygon per category
+  const sc = state.stageCost || 8;
+  const maxRate = state.maxRate || 30;
+  const groups = state.categories.map((c) => {
+    const color = c.polarity === "negative" ? t.neg : t.accent;
+    const axes = c.skills.map((s) => {
+      if (t.radarMetric === "rate") {
+        return { label: s.name, value: s.rate, max: 30, color };
+      }
+      const frac = SD.fracStage(s, sc);
+      return { label: s.name, value: frac, max: state.maxLevel, color };
+    });
+    return { name: c.name, color, axes };
+  });
+
+  const [editTitle, setEditTitle] = useState(false);
+  const totalSkills = state.categories.reduce((a, c) => a + c.skills.length, 0);
+  const share = Math.round(bal.share);
+  const netSign = bal.net > 0 ? "+" : "";
+
+  return (
+    <div className="app">
+      <FloatLayer floats={floats} />
+      {celebrate && (
+        <div className="celebrate">
+          <div className="celebrate-card" style={{ "--ce": celebrate.color }}>
+            <span className="ce-kicker">{celebrate.title}</span>
+            <span className="ce-num">{celebrate.big}</span>
+            <span className="ce-sub">{celebrate.sub}</span>
+          </div>
+        </div>
+      )}
+
+      <header className="topbar">
+        <div className="brand">
+          {editTitle ? (
+            <input
+              className="rename title-rename"
+              autoFocus
+              value={state.title}
+              onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
+              onBlur={() => setEditTitle(false)}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            />
+          ) : (
+            <h1 className="title" onClick={() => setEditTitle(true)} title="Rename chart">{state.title}</h1>
+          )}
+
+        </div>
+        <div className="actions">
+          <button className="ghost" onClick={() => fileRef.current.click()}>Import</button>
+          <button className="ghost" onClick={doExport}>Export</button>
+          <button className="ghost danger" onClick={doReset}>Reset</button>
+          <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={doImport} />
+        </div>
+      </header>
+
+      <main className={"layout" + (t.showRadar ? "" : " noradar")}>
+        {t.showRadar && (
+          <aside className="viz">
+            <div className="balancecard">
+              <div className="lvl-ring" style={{ "--pct": share }}>
+                <div className="lvl-inner">
+                  <span className="lvl-kick">Net</span>
+                  <span className="lvl-big">{netSign}{bal.net}</span>
+                </div>
+              </div>
+              <div className="lvl-meta">
+                <div className="bal-row"><span className="bal-dot pos" /> Positive <b>{bal.posRate}</b></div>
+                <div className="bal-row"><span className="bal-dot neg" /> Negative <b>{bal.negRate}</b></div>
+                <div className="mini-track"><span style={{ width: share + "%" }} /></div>
+                <div className="bal-share">{share}% positive · effort points</div>
+              </div>
+            </div>
+
+            <RadarChart groups={groups} />
+
+          </aside>
+        )}
+
+        <div className="board">
+          {state.categories.map((c) => (
+            <Category key={c.id} cat={c} max={state.maxLevel} maxRate={maxRate} stageCost={sc} accent={t.accent} neg={t.neg} step={t.pointsPerTap} onMutate={mutateCat(c.id)} onAdd={onAdd} />
+          ))}
+          <div className="add-cats">
+            <button className="add-cat" onClick={() => addCategory("positive")}>+ Positive category</button>
+            <button className="add-cat" onClick={() => addCategory("negative")}>+ Negative category</button>
+          </div>
+        </div>
+      </main>
+
+      <TweaksPanel>
+        <TweakSection label="Leveling" />
+        <TweakSlider label="Cycles per stage" value={state.stageCost} min={2} max={15} step={1} onChange={(v) => setState((s) => ({ ...s, stageCost: v }))} />
+        <TweakRadio label="Points per tap" value={t.pointsPerTap} options={[1, 5, 10]} onChange={(v) => setTweak("pointsPerTap", v)} />
+        <TweakSection label="Look" />
+        <TweakColor label="Positive color" value={t.accent} options={["#1F8A5B", "#5B5BD6", "#0E7490", "#9333EA", "#1A1916"]} onChange={(v) => setTweak("accent", v)} />
+        <TweakColor label="Negative color" value={t.neg} options={["#C2410C", "#B91C1C", "#A16207", "#7C3AED", "#525252"]} onChange={(v) => setTweak("neg", v)} />
+        <TweakColor label="Background" value={t.bg} options={["#F6F4EF", "#FFFFFF", "#F1F0EC", "#101014", "#0E1116"]} onChange={(v) => setTweak("bg", v)} />
+        <TweakSelect label="Font" value={t.font} options={["Space Grotesk", "DM Sans", "IBM Plex Sans", "Fraunces"]} onChange={(v) => setTweak("font", v)} />
+        <TweakRadio label="Density" value={t.density} options={["compact", "regular", "comfy"]} onChange={(v) => setTweak("density", v)} />
+        <TweakSection label="Radar" />
+        <TweakToggle label="Show radar" value={t.showRadar} onChange={(v) => setTweak("showRadar", v)} />
+        <TweakRadio label="Metric" value={t.radarMetric} options={["rate", "level"]} onChange={(v) => setTweak("radarMetric", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+(async () => {
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  @page { margin: 0.5cm; }\n  html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }\n  section, article, figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        !settleRoot.querySelector('.sc-placeholder');
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  try { await document.fonts.ready; } catch (e) {}
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+  } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>
